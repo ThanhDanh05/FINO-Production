@@ -38,6 +38,127 @@ const ORDER_STATUS_CONFIG = {
   }
 };
 
+// Danh sách tài xế giao hàng
+const DELIVERY_DRIVERS = [
+  {
+    id: 'DRV001',
+    name: 'Nguyễn Văn Minh',
+    phone: '0123456789',
+    vehicle: 'Honda Wave',
+    rating: 4.8,
+    completedDeliveries: 1247,
+    avatar: '🚴‍♂️',
+    status: 'active'
+  },
+  {
+    id: 'DRV002', 
+    name: 'Trần Thị Lan',
+    phone: '0987654321',
+    vehicle: 'Yamaha Sirius',
+    rating: 4.9,
+    completedDeliveries: 892,
+    avatar: '🛵',
+    status: 'active'
+  },
+  {
+    id: 'DRV003',
+    name: 'Lê Hoàng Nam',
+    phone: '0369852147',
+    vehicle: 'Honda Air Blade',
+    rating: 4.7,
+    completedDeliveries: 1534,
+    avatar: '🏍️',
+    status: 'active'
+  },
+  {
+    id: 'DRV004',
+    name: 'Phạm Văn Chiều',
+    phone: '0365252576',
+    vehicle: 'Honda Lead',
+    rating: 4.6,
+    completedDeliveries: 756,
+    avatar: '🛴',
+    status: 'active'
+  },
+  {
+    id: 'DRV005',
+    name: 'Võ Thị Mai',
+    phone: '0912345678',
+    vehicle: 'SH Mode',
+    rating: 5.0,
+    completedDeliveries: 2103,
+    avatar: '🛵',
+    status: 'active'
+  },
+  {
+    id: 'DRV006',
+    name: 'Đặng Văn Long',
+    phone: '0898765432',
+    vehicle: 'Exciter 150',
+    rating: 4.4,
+    completedDeliveries: 445,
+    avatar: '🏍️',
+    status: 'active'
+  }
+];
+
+// Hàm random tài xế dựa trên order ID
+const getAssignedDriver = (orderCode: string) => {
+  if (!orderCode) return null;
+  const hash = orderCode.split('').reduce((a, b) => {
+    a = ((a << 5) - a) + b.charCodeAt(0);
+    return a & a;
+  }, 0);
+  const index = Math.abs(hash) % DELIVERY_DRIVERS.length;
+  return DELIVERY_DRIVERS[index];
+};
+
+// Hàm tạo mã vận đơn thực tế từ order
+const generateTrackingCode = (orderCode: string, orderId: string) => {
+  if (!orderCode) return null;
+  // Tạo mã vận đơn dựa trên orderCode và orderId
+  const orderNumber = orderCode.replace('FINO', '').replace(/\D/g, '');
+  const idSuffix = orderId ? orderId.slice(-4).toUpperCase() : '0000';
+  return `VD${orderNumber}${idSuffix}`;
+};
+
+// Hàm tạo link theo dõi đơn hàng thực tế
+const getTrackingUrl = (trackingCode: string) => {
+  if (!trackingCode) return null;
+  return `https://tracking.fino.vn/track/${trackingCode}`;
+};
+
+// Hàm tạo thông tin vận chuyển chi tiết
+const getShippingInfo = (status: string, createdAt: string) => {
+  const orderDate = new Date(createdAt);
+  const now = new Date();
+  const diffHours = Math.floor((now.getTime() - orderDate.getTime()) / (1000 * 60 * 60));
+  
+  switch(status) {
+    case 'shipped':
+      return {
+        statusText: 'Đang giao hàng',
+        estimatedTime: 'Dự kiến giao: lúc 11:18 Thứ Tư, 20 tháng 8, 2025',
+        trackingStatus: 'Đang vận chuyển',
+        canTrack: true
+      };
+    case 'delivered':
+      return {
+        statusText: 'Đã giao thành công',
+        estimatedTime: 'Đã giao: lúc 17:05 Thứ Năm, 21 tháng 8, 2025',
+        trackingStatus: 'Giao hàng thành công',
+        canTrack: true
+      };
+    default:
+      return {
+        statusText: 'Đang xử lý',
+        estimatedTime: 'Đang chuẩn bị hàng',
+        trackingStatus: 'Chưa có thông tin vận chuyển',
+        canTrack: false
+      };
+  }
+};
+
 // Styles for PDF printing
 const getInvoiceStyles = () => `
   .invoice {
@@ -203,6 +324,7 @@ export default function OrderDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showInvoice, setShowInvoice] = useState(false);
+  const [showTrackingModal, setShowTrackingModal] = useState(false);
   const [hasRefreshedFromPayment, setHasRefreshedFromPayment] = useState(false);
 
   const fetchOrderDetail = useCallback(async () => {
@@ -924,6 +1046,195 @@ export default function OrderDetailPage() {
                 </div>
               </div>
 
+              {/* Delivery Driver Info - Only show for shipped/delivered orders */}
+              {order && (order.status === 'shipped' || order.status === 'delivered') && (() => {
+                const assignedDriver = getAssignedDriver(order.orderCode);
+                const trackingCode = generateTrackingCode(order.orderCode, order._id);
+                const trackingUrl = trackingCode ? getTrackingUrl(trackingCode) : null;
+                const shippingInfo = getShippingInfo(order.status, order.createdAt);
+                
+                return assignedDriver && trackingCode ? (
+                  <div className={styles.sidebarCard}>
+                    <div className={styles.sectionHeader}>
+                      <h3 className={styles.sectionTitle}>
+                        <span className={styles.sectionIcon}>🚚</span>
+                        Thông tin người giao hàng
+                      </h3>
+                    </div>
+                    
+                    <div className={styles.cardContent}>
+                      <div className={styles.driverInfo}>
+                        <div className={styles.driverHeader}>
+                          <div className={styles.driverAvatar}>
+                            {assignedDriver.avatar}
+                          </div>
+                          <div className={styles.driverBasicInfo}>
+                            <div className={styles.driverTitle}>TÀI XẾ:</div>
+                            <h4 className={styles.driverName}>{assignedDriver.name}</h4>
+                            <div className={styles.driverPhone}>
+                              <span className={styles.phoneLabel}>SỐ ĐIỆN THOẠI:</span>
+                              <span className={styles.phoneNumber}>{assignedDriver.phone}</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Shipping Details */}
+                        <div className={styles.shippingDetails}>
+                          <div className={styles.shippingRow}>
+                            <span className={styles.shippingLabel}>ĐƠN VỊ VẬN CHUYỂN:</span>
+                            <span className={styles.shippingValue}>FINO Express</span>
+                          </div>
+                          
+                          <div className={styles.shippingRow}>
+                            <span className={styles.shippingLabel}>MÃ VẬN ĐƠN:</span>
+                            <div className={styles.trackingCodeWrapper}>
+                              <span className={styles.shippingValue}>{trackingCode}</span>
+                              <button 
+                                className={styles.copyBtn}
+                                onClick={() => {
+                                  navigator.clipboard.writeText(trackingCode);
+                                  alert('Đã copy mã vận đơn!');
+                                }}
+                                title="Copy mã vận đơn"
+                              >
+                                Copy
+                              </button>
+                            </div>
+                          </div>
+
+                          <div className={styles.shippingRow}>
+                            <span className={styles.shippingLabel}>DỰ KIẾN GIAO:</span>
+                            <span className={styles.shippingValue}>
+                              {(() => {
+                                const orderDate = new Date(order.createdAt);
+                                orderDate.setDate(orderDate.getDate() + 2); // Add 2 days for expected delivery
+                                return formatDate(orderDate.toISOString());
+                              })()}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Delivery Status */}
+                        <div className={styles.deliveryStatus}>
+                          <div className={styles.statusIndicator}>
+                            <span className={styles.statusText}>
+                              {order.status === 'delivered' ? 'ĐÃ GIAO THÀNH CÔNG.' : 'ĐANG GIAO HÀNG'}
+                            </span>
+                          </div>
+                          <div className={styles.statusTime}>
+                            {order.status === 'delivered' 
+                              ? (() => {
+                                  const orderDate = new Date(order.createdAt);
+                                  orderDate.setDate(orderDate.getDate() + 2); // Add 2 days for delivery
+                                  return formatDate(orderDate.toISOString());
+                                })()
+                              : (() => {
+                                  const orderDate = new Date(order.createdAt);
+                                  orderDate.setDate(orderDate.getDate() + 1); // Add 1 day for shipping
+                                  return formatDate(orderDate.toISOString());
+                                })()
+                            }
+                          </div>
+                        </div>
+                        <div className={styles.trackingSection}>
+                          <div className={styles.trackingCode}>
+                            <span className={styles.trackingLabel}>Mã vận đơn:</span>
+                            <span className={styles.trackingValue}>{trackingCode}</span>
+                            <button 
+                              className={styles.copyBtn}
+                              onClick={() => {
+                                navigator.clipboard.writeText(trackingCode);
+                                alert('Đã copy mã vận đơn!');
+                              }}
+                              title="Copy mã vận đơn"
+                            >
+                              📋
+                            </button>
+                          </div>
+                        </div>
+                        
+                        <div className={styles.driverDetails}>
+                          <div className={styles.driverDetailRow}>
+                            <span className={styles.detailIcon}>📞</span>
+                            <span className={styles.detailLabel}>Điện thoại:</span>
+                            <span className={styles.detailValue}>{assignedDriver.phone}</span>
+                          </div>
+                          
+                          <div className={styles.driverDetailRow}>
+                            <span className={styles.detailIcon}>🏍️</span>
+                            <span className={styles.detailLabel}>Phương tiện:</span>
+                            <span className={styles.detailValue}>{assignedDriver.vehicle}</span>
+                          </div>
+                          
+                          <div className={styles.driverDetailRow}>
+                            <span className={styles.detailIcon}>✅</span>
+                            <span className={styles.detailLabel}>Trạng thái:</span>
+                            <span className={`${styles.detailValue} ${styles.driverActive}`}>
+                              {order.status === 'delivered' ? 'Đã giao hàng' : 'Đang giao hàng'}
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className={styles.driverActions}>
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            className={styles.callDriverBtn}
+                            onClick={() => {
+                              if (window.confirm(`Gọi cho tài xế ${assignedDriver.name} (${assignedDriver.phone})?`)) {
+                                window.open(`tel:${assignedDriver.phone}`);
+                              }
+                            }}
+                          >
+                            Gọi tài xế
+                          </Button>
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            className={styles.trackOrderBtn}
+                            onClick={() => {
+                              console.log('Opening tracking modal'); // Debug log
+                              setShowTrackingModal(true);
+                            }}
+                          >
+                            Xem theo dõi
+                          </Button>
+                        </div>
+
+                        {/* Quick Actions */}
+                        <div className={styles.quickActions}>
+                          <button 
+                            className={styles.quickActionBtn}
+                            onClick={() => window.open(`sms:${assignedDriver.phone}?body=Xin chào anh ${assignedDriver.name}, tôi muốn hỏi về đơn hàng ${order.orderCode}. Cảm ơn anh!`)}
+                            title="Gửi tin nhắn cho tài xế"
+                          >
+                            Nhắn tin
+                          </button>
+                          <button 
+                            className={styles.quickActionBtn}
+                            onClick={() => {
+                              const shareText = `Đơn hàng ${order.orderCode} đang được giao bởi tài xế ${assignedDriver.name} (${assignedDriver.phone}). Mã vận đơn: ${trackingCode}`;
+                              if (navigator.share) {
+                                navigator.share({
+                                  title: 'Thông tin giao hàng',
+                                  text: shareText
+                                });
+                              } else {
+                                navigator.clipboard.writeText(shareText);
+                                alert('Đã copy thông tin giao hàng!');
+                              }
+                            }}
+                            title="Chia sẻ thông tin giao hàng"
+                          >
+                            Chia sẻ
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ) : null;
+              })()}
+
               {/* Order Summary */}
               <div className={styles.sidebarCard}>
                 <div className={styles.sectionHeader}>
@@ -981,6 +1292,175 @@ export default function OrderDetailPage() {
             <OrderInvoice order={order} />
           </div>
         )}
+
+        {/* Tracking Modal */}
+        {showTrackingModal && order && (() => {
+          const assignedDriver = getAssignedDriver(order.orderCode);
+          const trackingCode = generateTrackingCode(order.orderCode, order._id);
+          const shippingInfo = getShippingInfo(order.status, order.createdAt);
+          
+          return (
+            <div className={styles.trackingModal} onClick={() => setShowTrackingModal(false)}>
+              <div className={styles.trackingModalContent} onClick={(e) => e.stopPropagation()}>
+                <div className={styles.trackingModalHeader}>
+                  <h2 className={styles.trackingModalTitle}>
+                    🚚 Theo dõi đơn hàng
+                  </h2>
+                  <button 
+                    className={styles.closeBtn}
+                    onClick={() => setShowTrackingModal(false)}
+                  >
+                    ✕
+                  </button>
+                </div>
+
+                <div className={styles.trackingModalBody}>
+                  {/* Order Info */}
+                  <div className={styles.trackingOrderInfo}>
+                    <div className={styles.trackingInfoRow}>
+                      <strong>Mã đơn hàng:</strong> {order.orderCode}
+                    </div>
+                    <div className={styles.trackingInfoRow}>
+                      <strong>Mã vận đơn:</strong> 
+                      <span className={styles.trackingCodeHighlight}>{trackingCode}</span>
+                      <button 
+                        className={styles.copySmallBtn}
+                        onClick={() => {
+                          navigator.clipboard.writeText(trackingCode || '');
+                          alert('Đã copy mã vận đơn!');
+                        }}
+                      >
+                        Copy
+                      </button>
+                    </div>
+                    <div className={styles.trackingInfoRow}>
+                      <strong>Đơn vị vận chuyển:</strong> FINO Express
+                    </div>
+                  </div>
+
+                  {/* Delivery Timeline */}
+                  <div className={styles.deliveryTimeline}>
+                    <h3 className={styles.timelineTitle}>Lộ trình giao hàng</h3>
+                    
+                    <div className={styles.timelineItem}>
+                      <div className={`${styles.timelineIcon} ${styles.completed}`}>✅</div>
+                      <div className={styles.timelineContent}>
+                        <div className={styles.timelineTime}>{formatDate(order.createdAt)}</div>
+                        <div className={styles.timelineText}>Đơn hàng đã được tạo</div>
+                      </div>
+                    </div>
+
+                    {(order.status === 'processing' || order.status === 'shipped' || order.status === 'delivered') && (
+                      <div className={styles.timelineItem}>
+                        <div className={`${styles.timelineIcon} ${styles.completed}`}>📦</div>
+                        <div className={styles.timelineContent}>
+                          <div className={styles.timelineTime}>
+                            {(() => {
+                              const orderDate = new Date(order.createdAt);
+                              orderDate.setHours(orderDate.getHours() + 3); // Add 3 hours for processing
+                              return formatDate(orderDate.toISOString());
+                            })()}
+                          </div>
+                          <div className={styles.timelineText}>Đơn hàng đang được chuẩn bị</div>
+                        </div>
+                      </div>
+                    )}
+
+                    {(order.status === 'shipped' || order.status === 'delivered') && (
+                      <div className={styles.timelineItem}>
+                        <div className={`${styles.timelineIcon} ${styles.completed}`}>🚚</div>
+                        <div className={styles.timelineContent}>
+                          <div className={styles.timelineTime}>
+                            {(() => {
+                              const orderDate = new Date(order.createdAt);
+                              orderDate.setDate(orderDate.getDate() + 1); // Add 1 day for shipping
+                              return formatDate(orderDate.toISOString());
+                            })()}
+                          </div>
+                          <div className={styles.timelineText}>
+                            Đơn hàng đang được giao bởi tài xế {assignedDriver?.name}
+                            <br/>
+                            <small>📞 {assignedDriver?.phone} • 🏍️ {assignedDriver?.vehicle}</small>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {order.status === 'delivered' && (
+                      <div className={styles.timelineItem}>
+                        <div className={`${styles.timelineIcon} ${styles.completed}`}>🎉</div>
+                        <div className={styles.timelineContent}>
+                          <div className={styles.timelineTime}>
+                            {(() => {
+                              const orderDate = new Date(order.createdAt);
+                              orderDate.setDate(orderDate.getDate() + 2); // Add 2 days for delivery
+                              return formatDate(orderDate.toISOString());
+                            })()}
+                          </div>
+                                                    <div className={styles.timelineText}>Đã giao hàng thành công</div>
+                        </div>
+                      </div>
+                    )}
+
+                    {order.status === 'shipped' && (
+                      <div className={styles.timelineItem}>
+                        <div className={`${styles.timelineIcon} ${styles.pending}`}>⏳</div>
+                        <div className={styles.timelineContent}>
+                          <div className={styles.timelineTime}>
+                            Dự kiến: {(() => {
+                              const orderDate = new Date(order.createdAt);
+                              orderDate.setDate(orderDate.getDate() + 2); // Add 2 days for expected delivery
+                              return formatDate(orderDate.toISOString());
+                            })()}
+                          </div>
+                          <div className={styles.timelineText}>Sẽ giao hàng thành công</div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Delivery Address */}
+                  <div className={styles.deliveryAddress}>
+                    <h3 className={styles.addressTitle}>Địa chỉ giao hàng</h3>
+                    <div className={styles.addressContent}>
+                      <strong>{order.address?.fullName}</strong><br/>
+                      📞 {order.address?.phone}<br/>
+                      📍 {order.address?.addressLine}, {order.address?.ward}, {order.address?.district}, {order.address?.city}
+                    </div>
+                  </div>
+
+                  {/* Quick Actions */}
+                  <div className={styles.trackingActions}>
+                    <button 
+                      className={styles.trackingActionBtn}
+                      onClick={() => {
+                        if (assignedDriver?.phone) {
+                          window.open(`tel:${assignedDriver.phone}`);
+                        }
+                      }}
+                    >
+                      📞 Gọi tài xế
+                    </button>
+                    <button 
+                      className={styles.trackingActionBtn}
+                      onClick={() => {
+                        const shareText = `Theo dõi đơn hàng ${order.orderCode} - Mã vận đơn: ${trackingCode}. Trạng thái: ${shippingInfo.statusText}`;
+                        if (navigator.share) {
+                          navigator.share({ title: 'Theo dõi đơn hàng', text: shareText });
+                        } else {
+                          navigator.clipboard.writeText(shareText);
+                          alert('Đã copy thông tin theo dõi!');
+                        }
+                      }}
+                    >
+                      📤 Chia sẻ
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
       </div>
     </div>
   );

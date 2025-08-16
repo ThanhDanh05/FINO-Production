@@ -25,6 +25,20 @@ const OrderSchema = new mongoose.Schema({
   status: { type: String, enum: ['pending', 'processing', 'shipped', 'delivered', 'cancelled'], default: 'pending' },
   paymentMethod: { type: mongoose.Schema.Types.ObjectId, ref: 'PaymentMethod', required: true },
   paymentStatus: { type: String, enum: ['pending', 'paid', 'failed', 'cancelled'], default: 'pending' }, // Updated for VNPay
+  
+  // Delivery information
+  deliveryPerson: {
+    name: { type: String }, // Tên tài xế
+    phone: { type: String }, // SĐT tài xế  
+    company: { type: String, default: 'FINO Express' }, // Công ty vận chuyển
+    vehicleNumber: { type: String }, // Biển số xe
+    avatar: { type: String } // Avatar tài xế
+  },
+  trackingNumber: { type: String }, // Mã vận đơn
+  estimatedDelivery: { type: Date }, // Thời gian dự kiến giao hàng
+  shippedAt: { type: Date }, // Thời gian bắt đầu giao hàng
+  deliveredAt: { type: Date }, // Thời gian giao hàng thành công
+  
   paymentDetails: { // VNPay payment details
     transactionNo: { type: String }, // VNPay transaction number
     bankCode: { type: String }, // Bank code from VNPay

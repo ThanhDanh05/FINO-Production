@@ -152,6 +152,19 @@ export interface Order extends BaseEntity {
   status: 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled'; // default: 'pending'
   paymentMethod: string; // ObjectId ref PaymentMethod, required
   paymentStatus: 'pending' | 'paid' | 'failed' | 'cancelled'; // default: 'pending'
+  
+  // Delivery information
+  deliveryPerson?: {
+    name?: string; // Tên tài xế
+    phone?: string; // SĐT tài xế  
+    company?: string; // Công ty vận chuyển
+    vehicleNumber?: string; // Biển số xe
+    avatar?: string; // Avatar tài xế
+  };
+  trackingNumber?: string; // Mã vận đơn
+  estimatedDelivery?: string; // Thời gian dự kiến giao hàng
+  shippedAt?: string; // Thời gian bắt đầu giao hàng
+  deliveredAt?: string; // Thời gian giao hàng thành công
 }
 
 // ============= 14. WISHLIST ITEM SCHEMA (embedded in WishList) =============
