@@ -16,7 +16,7 @@ import {
   FaShareAlt
 } from 'react-icons/fa';
 import ProductItem from '@/app/components/ProductItem';
-import { selectBestVariant, hasAvailableVariants } from '@/utils/variantUtils';
+import { selectBestVariant, hasAvailableVariants } from '@/lib/variantUtils';
 import styles from './WishlistEnhancements.module.css';
 
 interface WishlistItemEnhancedProps {
