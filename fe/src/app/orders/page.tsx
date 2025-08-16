@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts';
 import { useApiNotification } from '@/hooks';
 import { PageHeader, LoadingSpinner, Button, Pagination, OrderDetailButton } from '@/app/components/ui';
+import { EnhancedOrderCard, OrderStats } from './OrderEnhancements';
 import { orderService } from '@/services/orderService';
 import { OrderWithRefs } from '@/types';
 import { formatCurrency } from '@/lib/utils';
@@ -40,7 +41,7 @@ interface OrderFilters {
 export default function OrdersPage() {
   const router = useRouter();
   const { user, isLoading: authLoading } = useAuth();
-  const { showError } = useApiNotification();
+  const { showError, showSuccess } = useApiNotification();
 
   // States
   const [orders, setOrders] = useState<OrderWithRefs[]>([]);
@@ -152,39 +153,43 @@ export default function OrdersPage() {
     setCurrentPage(page);
   };
 
-  // Get status icon and label
-  const getStatusDisplay = (status: string) => {
-    const statusConfig = {
-      pending: { icon: <FaClock />, label: 'Chờ xác nhận', className: styles.statusPending },
-      processing: { icon: <FaTruck />, label: 'Đang xử lý', className: styles.statusProcessing },
-      shipped: { icon: <FaTruck />, label: 'Đã gửi hàng', className: styles.statusShipped },
-      delivered: { icon: <FaCheckCircle />, label: 'Đã giao', className: styles.statusDelivered },
-      cancelled: { icon: <FaTimesCircle />, label: 'Đã hủy', className: styles.statusCancelled }
-    };
-
-    const config = statusConfig[status as keyof typeof statusConfig] || { 
-      icon: <FaClock />,
-      label: status, 
-      className: styles.statusPending 
-    };
-
-    return (
-      <span className={`${styles.orderStatus} ${config.className}`}>
-        <span className={styles.statusIcon}>{config.icon}</span>
-        {config.label}
-      </span>
-    );
+  // Handle cancel order
+  const handleCancelOrder = async (orderId: string) => {
+    try {
+      await orderService.cancelOrder(orderId);
+      showSuccess('Đã hủy đơn hàng thành công');
+      loadOrders(); // Reload orders
+    } catch (error: any) {
+      console.error('❌ Error canceling order:', error);
+      showError('Không thể hủy đơn hàng', error);
+    }
   };
 
-  // Format date
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('vi-VN', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
+  // Handle reorder
+  const handleReorder = async (orderId: string) => {
+    try {
+      // Get order details
+      const order = await orderService.getOrderById(orderId);
+      
+      // Navigate to the order for manual re-add to cart
+      // In a real implementation, you would add items to cart programmatically
+      showSuccess('Chuyển đến trang sản phẩm để đặt lại');
+      router.push(`/orders/${orderId}`);
+    } catch (error: any) {
+      console.error('❌ Error reordering:', error);
+      showError('Không thể đặt lại đơn hàng', error);
+    }
+  };
+
+  // Handle download invoice
+  const handleDownloadInvoice = async (orderId: string) => {
+    try {
+      showSuccess('Tính năng tải hóa đơn sẽ được cập nhật sớm');
+      // TODO: Implement invoice download
+    } catch (error: any) {
+      console.error('❌ Error downloading invoice:', error);
+      showError('Không thể tải hóa đơn', error);
+    }
   };
 
   // Loading state
@@ -215,6 +220,10 @@ export default function OrdersPage() {
         />
 
         <div className={styles.mainContent}>
+          {/* Order Statistics */}
+          {orders.length > 0 && (
+            <OrderStats orders={orders} />
+          )}
           {/* Filters Section */}
           <div className={styles.filtersSection}>
             <div className={styles.filtersGrid}>
@@ -302,78 +311,13 @@ export default function OrdersPage() {
               <>
                 <div className={styles.ordersList}>
                   {orders.map((order) => (
-                    <div key={order._id} className={styles.orderCard}>
-                      <div className={styles.orderHeader}>
-                        <div className={styles.orderInfo}>
-                          <h4 className={styles.orderCode}>#{order.orderCode}</h4>
-                          <div className={styles.orderMeta}>
-                            <span className={styles.orderDate}>
-                              <FaClock className={styles.metaIcon} />
-                              {formatDate(order.createdAt)}
-                            </span>
-                            {getStatusDisplay(order.status)}
-                          </div>
-                        </div>
-                        <div className={styles.orderTotal}>
-                          <span className={styles.totalLabel}>Tổng tiền:</span>
-                          <span className={styles.totalAmount}>{formatCurrency(order.finalTotal || 0)}</span>
-                        </div>
-                      </div>
-                      
-                      <div className={styles.orderItems}>
-                        {order.items?.slice(0, 2).map((item: any, index: number) => (
-                          <div key={index} className={styles.orderItem}>
-                            <div className={styles.itemInfo}>
-                              <span className={styles.itemName}>
-                                {item.productVariant?.product?.name || item.productName}
-                              </span>
-                              <span className={styles.itemDetails}>
-                                Số lượng: {item.quantity} • {formatCurrency(item.price)}
-                              </span>
-                              {item.productVariant?.color?.name || item.productVariant?.size?.name ? (
-                                <div className={styles.itemVariant}>
-                                  {item.productVariant?.color?.name && `Màu: ${item.productVariant.color.name}`}
-                                  {item.productVariant?.color?.name && item.productVariant?.size?.name && ' • '}
-                                  {item.productVariant?.size?.name && `Size: ${item.productVariant.size.name}`}
-                                </div>
-                              ) : null}
-                            </div>
-                          </div>
-                        ))}
-                        {(order.items?.length || 0) > 2 && (
-                          <div className={styles.moreItems}>
-                            +{(order.items?.length || 0) - 2} sản phẩm khác
-                          </div>
-                        )}
-                      </div>
-
-                      <div className={styles.orderActions}>
-                        <OrderDetailButton 
-                          orderId={order._id}
-                          variant="outline"
-                          size="sm"
-                        >
-                          <FaEye className={styles.buttonIcon} />
-                          Xem chi tiết
-                        </OrderDetailButton>
-                        {order.status === 'pending' && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className={styles.cancelButton}
-                            onClick={() => {
-                              if (confirm('Bạn có chắc chắn muốn hủy đơn hàng này?')) {
-                                // Handle cancel order
-                                console.log('Cancel order:', order._id);
-                              }
-                            }}
-                          >
-                            <FaTimesCircle className={styles.buttonIcon} />
-                            Hủy đơn
-                          </Button>
-                        )}
-                      </div>
-                    </div>
+                    <EnhancedOrderCard
+                      key={order._id}
+                      order={order}
+                      onCancelOrder={handleCancelOrder}
+                      onReorder={handleReorder}
+                      onDownloadInvoice={handleDownloadInvoice}
+                    />
                   ))}
                 </div>
 
