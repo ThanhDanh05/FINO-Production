@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth, useWishlist, useApiNotification, useCart, useProductStats } from '@/hooks';
 import { Button, PageHeader, LoadingSpinner, Pagination } from '@/app/components/ui';
 import FilterSidebar from '@/app/components/FilterSidebar';
-import ProductItem from '@/app/components/ProductItem';
+import { WishlistItemEnhanced, WishlistQuickActions } from './WishlistEnhancements';
 import { FaHeart, FaShoppingCart, FaTimes, FaBox } from 'react-icons/fa';
 import { selectBestVariant, hasAvailableVariants } from '@/lib/variantUtils';
 import VariantCacheService from '@/services/variantCacheService';
@@ -53,6 +53,8 @@ export default function WishlistPage() {
   const [sortBy, setSortBy] = useState('newest');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [priceRange, setPriceRange] = useState({ min: '', max: '' });
+  const [isSelectMode, setIsSelectMode] = useState(false);
+  const [selectedItems, setSelectedItems] = useState<string[]>([]);
 
   // Sort options for FilterSidebar
   const sortOptions = [
@@ -442,51 +444,27 @@ export default function WishlistPage() {
             <div className={styles.wishlistContainer}>
               {paginatedItems.length > 0 ? (
                 <>
-                  {/* Wishlist Actions - Similar to Cart Actions */}
-                  <div className={styles.wishlistActions}>
-                    <div className={styles.actionButtons}>
-                      <Button
-                        variant="outline"
-                        onClick={handleClearWishlist}
-                        className={styles.clearWishlistButton}
-                      >
-                        <FaTimes />
-                        Xóa tất cả
-                      </Button>
-                      <Button
-                        onClick={handleAddAllToCart}
-                        className={styles.addAllToCartButton}
-                      >
-                        <FaShoppingCart />
-                        Mua tất cả ({filteredAndSortedItems.length} sản phẩm)
-                      </Button>
-                    </div>
-                    <div className={styles.resultsInfo}>
-                      <span className={styles.resultsCount}>
-                        Hiển thị {paginatedItems.length} trong tổng số {filteredAndSortedItems.length} sản phẩm
-                      </span>
-                    </div>
-                  </div>
+                  {/* Enhanced Wishlist Actions */}
+                  <WishlistQuickActions
+                    totalItems={wishlistItems.length}
+                    filteredItems={filteredAndSortedItems.length}
+                    onClearAll={handleClearWishlist}
+                    onAddAllToCart={handleAddAllToCart}
+                    onSelectMode={() => setIsSelectMode(!isSelectMode)}
+                    isSelectMode={isSelectMode}
+                  />
 
                   {/* Wishlist Items Grid */}
                   <div className={styles.wishlistItems}>
-                    {paginatedItems.map((item, index) => {
-                      // Get real stats for this product
-                      const productStatsData = productStats[item.product._id];
-                      
-                      return (
-                        <div key={`${item._id || item.product._id}-${index}`} className={styles.productWrapper}>
-                          <ProductItem 
-                            product={item.product as any}
-                            layout="grid"
-                            showQuickActions={true}
-                            averageRating={productStatsData?.averageRating || 0}
-                            reviewCount={productStatsData?.reviewCount || 0}
-                            showRatingBadge={true}
-                          />
-                        </div>
-                      );
-                    })}
+                    {paginatedItems.map((item, index) => (
+                      <WishlistItemEnhanced
+                        key={`${item._id || item.product._id}-${index}`}
+                        item={item}
+                        index={index}
+                        productStats={productStats}
+                        onRemove={handleRemoveItem}
+                      />
+                    ))}
                   </div>
 
                   {/* Pagination */}
