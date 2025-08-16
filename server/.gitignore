@@ -1,8 +1,27 @@
-# Environment variables
+# Environment variables - CRITICAL SECURITY
 .env
+.env.*
 .env.local
 .env.development
 .env.production
+.env.test
+.env.staging
+*.env
+env.*
+.environment
+environment.*
+
+# Database and API keys
+config/database.js
+config/keys.js
+config/secrets.js
+secrets.*
+keys.*
+credentials.*
+*.key
+*.pem
+*.crt
+*.cert
 
 # Node modules
 node_modules/
