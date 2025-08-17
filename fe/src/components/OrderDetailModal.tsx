@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
-import { OrderWithRefs } from '@/types';
+import { OrderWithRefs, Address } from '@/types';
 import { orderService } from '@/services/orderService';
+import { AddressService } from '@/services/addressService';
 
 interface OrderDetailModalProps {
   orderId: string | null;
@@ -12,6 +13,8 @@ export default function OrderDetailModal({ orderId, isOpen, onClose }: OrderDeta
   const [orderDetail, setOrderDetail] = useState<OrderWithRefs | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [userAddresses, setUserAddresses] = useState<Address[]>([]);
+  const [defaultAddress, setDefaultAddress] = useState<Address | null>(null);
 
   useEffect(() => {
     if (isOpen && orderId) {
@@ -28,6 +31,22 @@ export default function OrderDetailModal({ orderId, isOpen, onClose }: OrderDeta
       // Use admin method to fetch order details
       const detail = await orderService.getOrderByIdAdmin(orderId);
       setOrderDetail(detail);
+      
+      // Fetch user's addresses to get the default address
+      if (detail.user?._id) {
+        try {
+          const addressService = AddressService.getInstance();
+          const addresses = await addressService.getUserAddresses();
+          setUserAddresses(addresses);
+          // Find the default address
+          const defaultAddr = addresses.find(addr => addr.isDefault);
+          setDefaultAddress(defaultAddr || null);
+        } catch (addressError) {
+          console.warn('Could not fetch user addresses:', addressError);
+          // Fallback to order address if we can't get user addresses
+          setDefaultAddress(null);
+        }
+      }
     } catch (err: any) {
       setError(err.message || 'Không thể tải chi tiết đơn hàng');
     } finally {
@@ -202,13 +221,25 @@ export default function OrderDetailModal({ orderId, isOpen, onClose }: OrderDeta
                   <div style={{ gridColumn: 'span 2' }}>
                     <span style={{ color: '#6b7280' }}>Địa chỉ giao hàng:</span>
                     <div style={{ fontWeight: 600, marginTop: '0.25rem', color: '#1f2937' }}>
-                      {orderDetail.address ? (
-                        <>
-                          {orderDetail.address.addressLine}<br />
-                          {orderDetail.address.ward}, {orderDetail.address.district}, {orderDetail.address.city}<br />
-                          <span style={{ color: '#6b7280' }}>SĐT: {orderDetail.address.phone}</span>
-                        </>
-                      ) : 'N/A'}
+                      {(() => {
+                        // Priority: Use default address if available, fallback to order address
+                        const addressToShow = defaultAddress || orderDetail.address;
+                        if (addressToShow) {
+                          return (
+                            <>
+                              {addressToShow.addressLine}<br />
+                              {addressToShow.ward}, {addressToShow.district}, {addressToShow.city}<br />
+                              <span style={{ color: '#6b7280' }}>SĐT: {addressToShow.phone}</span>
+                              {defaultAddress && defaultAddress._id !== orderDetail.address?._id && (
+                                <div style={{ fontSize: '0.75rem', color: '#f59e0b', marginTop: '0.25rem', fontStyle: 'italic' }}>
+                                  ⚠️ Hiển thị địa chỉ mặc định (khác với địa chỉ gốc trong đơn hàng)
+                                </div>
+                              )}
+                            </>
+                          );
+                        }
+                        return 'N/A';
+                      })()}
                     </div>
                   </div>
                 </div>
