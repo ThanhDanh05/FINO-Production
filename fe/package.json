@@ -5,8 +5,16 @@
   "scripts": {
     "dev": "next dev -p 3002 --turbo",
     "build": "next build",
-    "start": "next start",
-    "lint": "next lint"
+    "start": "next start -p 3002",
+    "lint": "next lint",
+    "type-check": "tsc --noEmit",
+    "build:analyze": "cross-env ANALYZE=true next build",
+    "build:vercel": "npm run type-check && next build",
+    "export": "next export",
+    "deploy:vercel": "vercel --prod",
+    "preview": "npm run build && npm run start",
+    "clean": "rm -rf .next out node_modules/.cache",
+    "postbuild": "echo 'Build completed successfully for FINO E-Commerce Platform'"
   },
   "dependencies": {
     "@fortawesome/fontawesome-free": "^6.7.2",

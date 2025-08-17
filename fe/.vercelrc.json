@@ -1,0 +1,25 @@
+{
+  "name": "fino-ecommerce-platform",
+  "version": 2,
+  "alias": ["fino-production"],
+  "regions": ["hnd1"],
+  "github": {
+    "repository": "ThanhDanh05/FINO-Production",
+    "branch": "development"
+  },
+  "build": {
+    "command": "npm run build:vercel"
+  },
+  "functions": {
+    "app/**/*.js": {
+      "runtime": "nodejs18.x",
+      "maxDuration": 30
+    }
+  },
+  "crons": [
+    {
+      "path": "/api/cron/cleanup",
+      "schedule": "0 0 * * *"
+    }
+  ]
+}

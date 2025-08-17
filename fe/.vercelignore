@@ -1,0 +1,88 @@
+# Vercel ignore patterns
+# Files and directories to ignore during Vercel deployment
+
+# Development files
+*.development.*
+.env.local
+.env.development
+.env.test
+
+# Testing
+__tests__/
+**/*.test.*
+**/*.spec.*
+coverage/
+jest.config.*
+
+# Documentation
+*.md
+!README.md
+docs/
+.github/
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.temp
+temp/
+tmp/
+
+# Logs
+*.log
+logs/
+
+# Development tools
+.eslintcache
+.stylelintcache
+
+# Backup files
+*.backup
+*.bak
+*.orig
+
+# Local environment
+.env.example
+.env.local.example
+
+# Node modules (already handled by .gitignore but explicit for Vercel)
+node_modules/
+
+# Build cache
+.next/cache/
+.turbo/
+
+# Storybook
+.storybook/
+storybook-static/
+
+# Development scripts
+dev-scripts/
+build-scripts/dev-*
+
+# Local database
+*.db
+*.sqlite
+*.sqlite3
+
+# Local uploads/temp assets
+uploads/temp/
+public/temp/
+
+# Development utilities
+dev-utils/
+test-utils/local/
