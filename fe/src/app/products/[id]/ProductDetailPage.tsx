@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import Image from 'next/image';
 import { FaStar, FaHeart, FaRegHeart, FaShoppingCart, FaCheck, FaPlus, FaMinus, FaShare, FaTruck, FaShieldAlt, FaUndoAlt, FaPhoneAlt, FaShoppingBag } from 'react-icons/fa';
 
 // Import contexts and hooks
@@ -58,6 +57,14 @@ export default function ProductDetailPage({ productId }: ProductDetailPageProps)
     const variantImages = selectedVariant?.images || [];
     const productImages = product?.images || [];
     
+    // Debug logging
+    console.log('🖼️ Image Debug:', {
+      productName: product?.name,
+      productImages: productImages,
+      selectedVariant: selectedVariant,
+      variantImages: variantImages
+    });
+    
     // If variant has images, show variant images first, then product images as additional options
     if (variantImages.length > 0) {
       console.log('🖼️ Using variant images + product images:', variantImages.length, '+', productImages.length);
@@ -73,15 +80,14 @@ export default function ProductDetailPage({ productId }: ProductDetailPageProps)
     
     // If no variant images, use product images
     if (productImages.length > 0) {
-      console.log('🖼️ Using product images only:', productImages.length);
+      console.log('🖼️ Using product images only:', productImages.length, productImages);
       return productImages;
     }
     
     // Default placeholder images
     console.log('🖼️ Using placeholder images');
     return [
-      'https://picsum.photos/seed/product54_1/600/800',
-      'https://picsum.photos/seed/product54_2/600/800'
+      'https://via.placeholder.com/600x800?text=Không+có+ảnh'
     ];
   }, [selectedVariant, product]);
 
@@ -390,12 +396,15 @@ export default function ProductDetailPage({ productId }: ProductDetailPageProps)
           <div className={styles.imageSection}>
             <div className={styles.mainImage}>
               {currentImages && currentImages.length > 0 ? (
-                <Image
+                <img
                   src={currentImages[selectedImageIndex] || currentImages[0]}
                   alt={product.name}
-                  width={600}
-                  height={600}
                   className={`${styles.productImage} ${imageLoading ? '' : styles.loaded}`}
+                  style={{ width: '100%', height: 'auto', maxWidth: '600px', maxHeight: '600px', objectFit: 'cover' }}
+                  onError={(e) => {
+                    console.error('Image load error:', currentImages[selectedImageIndex]);
+                    e.currentTarget.src = 'https://via.placeholder.com/600x600?text=No+Image';
+                  }}
                 />
               ) : (
                 <div className={styles.noImage}>
@@ -414,18 +423,21 @@ export default function ProductDetailPage({ productId }: ProductDetailPageProps)
               )}
             </div>
             
-            {/* Always show thumbnails for consistent UX, hide only for placeholder images */}
-            {currentImages && currentImages.length > 0 && !currentImages[0].includes('picsum.photos') && (
+            {/* Always show thumbnails for consistent UX */}
+            {currentImages && currentImages.length > 1 && (
               <div className={styles.thumbnails}>
                 {currentImages.map((image: string, index: number) => (
-                  <Image
+                  <img
                     key={index}
                     src={image}
                     alt={`${product.name} ${index + 1}`}
-                    width={80}
-                    height={80}
                     className={`${styles.thumbnail} ${selectedImageIndex === index ? styles.active : ''}`}
                     onClick={() => handleThumbnailClick(index)}
+                    style={{ width: '80px', height: '80px', objectFit: 'cover', cursor: 'pointer' }}
+                    onError={(e) => {
+                      console.error('Thumbnail load error:', image);
+                      e.currentTarget.src = 'https://via.placeholder.com/80x80?text=No+Image';
+                    }}
                   />
                 ))}
               </div>

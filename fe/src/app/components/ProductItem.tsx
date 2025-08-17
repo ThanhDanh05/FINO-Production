@@ -188,6 +188,10 @@ export default function ProductItem({
               alt={product.name}
               className={styles.productImage}
               loading="lazy"
+              onError={(e) => {
+                console.error('ProductItem image load error:', mainImage);
+                e.currentTarget.src = 'https://via.placeholder.com/300x300?text=Không+có+ảnh';
+              }}
             />
           ) : (
             <div className={styles.noImage}>

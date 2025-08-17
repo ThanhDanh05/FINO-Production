@@ -1,0 +1,3 @@
+# This is a placeholder file for the image
+# In a real application, you would place an actual placeholder image here
+# For now, we'll create an SVG placeholder using the Image component with a fallback

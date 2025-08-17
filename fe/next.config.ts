@@ -1,47 +1,34 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   images: {
-    // Allow images from any domain (for development - consider restricting in production)
+    // Disable image optimization completely for external images
     unoptimized: true,
+    // Allow all domains temporarily for development
+    domains: [
+      'product.hstatic.net',
+      'storage.googleapis.com', 
+      'images.unsplash.com',
+      'cdn.hstatic.net',
+      'papka.vn',
+      'dosi-in.com',
+      'localhost'
+    ],
     remotePatterns: [
       {
         protocol: 'https',
         hostname: '**',
       },
       {
-        protocol: 'http',
+        protocol: 'http', 
         hostname: '**',
-      },
-      {
-        protocol: 'https',
-        hostname: 'storage.googleapis.com',
-        pathname: '/a1aa/image/**',
-      },
-      {
-        protocol: 'https',
-        hostname: 'images.unsplash.com',
-      },
-      {
-        protocol: 'https',
-        hostname: 'cdn.hstatic.net',
-      },
-      {
-        protocol: 'https',
-        hostname: 'papka.vn',
-      },
-      {
-        protocol: 'https',
-        hostname: 'product.hstatic.net',
-      },
-      {
-        protocol: 'https',
-        hostname: 'localhost',
-      },
-      {
-        protocol: 'http',
-        hostname: 'localhost',
       }
     ],
+    // Disable loader to prevent optimization issues
+    loader: 'default',
+    // Add dangerouslyAllowSVG if needed
+    dangerouslyAllowSVG: true,
+    contentDispositionType: 'attachment',
+    contentSecurityPolicy: "default-src 'self'; script-src 'none'; sandbox;",
   },
 };
 

@@ -32,18 +32,18 @@ export default function OrderDetailModal({ orderId, isOpen, onClose }: OrderDeta
       const detail = await orderService.getOrderByIdAdmin(orderId);
       setOrderDetail(detail);
       
-      // Fetch user's addresses to get the default address
+      // Fetch user's current default address
       if (detail.user?._id) {
         try {
           const addressService = AddressService.getInstance();
           const addresses = await addressService.getUserAddresses();
           setUserAddresses(addresses);
-          // Find the default address
+          // Find the current default address
           const defaultAddr = addresses.find(addr => addr.isDefault);
           setDefaultAddress(defaultAddr || null);
         } catch (addressError) {
           console.warn('Could not fetch user addresses:', addressError);
-          // Fallback to order address if we can't get user addresses
+          // Fallback to order address if we can't get current user addresses
           setDefaultAddress(null);
         }
       }
@@ -222,17 +222,24 @@ export default function OrderDetailModal({ orderId, isOpen, onClose }: OrderDeta
                     <span style={{ color: '#6b7280' }}>Địa chỉ giao hàng:</span>
                     <div style={{ fontWeight: 600, marginTop: '0.25rem', color: '#1f2937' }}>
                       {(() => {
-                        // Priority: Use default address if available, fallback to order address
+                        // Priority: Use current default address if available, fallback to order address
                         const addressToShow = defaultAddress || orderDetail.address;
                         if (addressToShow) {
                           return (
                             <>
-                              {addressToShow.addressLine}<br />
-                              {addressToShow.ward}, {addressToShow.district}, {addressToShow.city}<br />
-                              <span style={{ color: '#6b7280' }}>SĐT: {addressToShow.phone}</span>
+                              <div style={{ marginBottom: '0.25rem', fontWeight: 600 }}>
+                                Người nhận: {addressToShow.fullName}
+                              </div>
+                              <div style={{ marginBottom: '0.25rem' }}>
+                                SĐT: {addressToShow.phone}
+                              </div>
+                              <div>
+                                {addressToShow.addressLine}<br />
+                                {addressToShow.ward}, {addressToShow.district}, {addressToShow.city}
+                              </div>
                               {defaultAddress && defaultAddress._id !== orderDetail.address?._id && (
-                                <div style={{ fontSize: '0.75rem', color: '#f59e0b', marginTop: '0.25rem', fontStyle: 'italic' }}>
-                                  ⚠️ Hiển thị địa chỉ mặc định (khác với địa chỉ gốc trong đơn hàng)
+                                <div style={{ fontSize: '0.75rem', color: '#f59e0b', marginTop: '0.5rem', fontStyle: 'italic' }}>
+                                  ⚠️ Hiển thị địa chỉ mặc định hiện tại (khác với địa chỉ gốc khi đặt hàng)
                                 </div>
                               )}
                             </>
@@ -259,7 +266,7 @@ export default function OrderDetailModal({ orderId, isOpen, onClose }: OrderDeta
                   {orderDetail.items?.map((item, index) => (
                     <div key={index} style={{
                       display: 'grid',
-                      gridTemplateColumns: '1fr auto auto auto',
+                      gridTemplateColumns: '80px 1fr auto auto auto',
                       gap: '0.75rem',
                       alignItems: 'center',
                       padding: '0.75rem',
@@ -267,6 +274,70 @@ export default function OrderDetailModal({ orderId, isOpen, onClose }: OrderDeta
                       borderRadius: '0.375rem',
                       border: '1px solid #e5e7eb'
                     }}>
+                      <div style={{ 
+                        width: '80px', 
+                        height: '80px', 
+                        borderRadius: '0.375rem',
+                        overflow: 'hidden',
+                        border: '1px solid #e5e7eb',
+                        flexShrink: 0,
+                        backgroundColor: '#f9fafb'
+                      }}>
+                        {item.productVariant?.product?.images?.[0] ? (
+                          <img 
+                            src={item.productVariant.product.images[0]} 
+                            alt={item.productVariant?.product?.name || 'Sản phẩm'}
+                            style={{ 
+                              width: '100%', 
+                              height: '100%', 
+                              objectFit: 'cover',
+                              display: 'block'
+                            }}
+                            onError={(e) => {
+                              const target = e.target as HTMLImageElement;
+                              target.style.display = 'none';
+                              const parent = target.parentElement;
+                              if (parent) {
+                                parent.innerHTML = `
+                                  <div style="
+                                    width: 100%; 
+                                    height: 100%; 
+                                    display: flex; 
+                                    align-items: center; 
+                                    justify-content: center;
+                                    background-color: #f3f4f6;
+                                    color: #9ca3af;
+                                    font-size: 0.75rem;
+                                    text-align: center;
+                                  ">
+                                    <div>
+                                      <div style="font-size: 1.5rem; margin-bottom: 0.25rem;">📦</div>
+                                      <div>Không có ảnh</div>
+                                    </div>
+                                  </div>
+                                `;
+                              }
+                            }}
+                          />
+                        ) : (
+                          <div style={{
+                            width: '100%', 
+                            height: '100%', 
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            justifyContent: 'center',
+                            backgroundColor: '#f3f4f6',
+                            color: '#9ca3af',
+                            fontSize: '0.75rem',
+                            textAlign: 'center'
+                          }}>
+                            <div>
+                              <div style={{ fontSize: '1.5rem', marginBottom: '0.25rem' }}>📦</div>
+                              <div>Không có ảnh</div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
                       <div>
                         <div style={{ fontWeight: 600, color: '#1f2937', marginBottom: '0.25rem' }}>
                           {item.productVariant?.product?.name || 'Sản phẩm không xác định'}

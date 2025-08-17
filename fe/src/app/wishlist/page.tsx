@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth, useWishlist, useApiNotification, useCart, useProductStats } from '@/hooks';
 import { Button, PageHeader, LoadingSpinner, Pagination } from '@/app/components/ui';
 import FilterSidebar from '@/app/components/FilterSidebar';
-import { WishlistItemEnhanced, WishlistQuickActions } from './WishlistEnhancements';
+import { EnhancedWishlistItem, WishlistStats, WishlistQuickActions } from './EnhancedWishlistComponents';
 import { FaHeart, FaShoppingCart, FaTimes, FaBox } from 'react-icons/fa';
 import { selectBestVariant, hasAvailableVariants } from '@/lib/variantUtils';
 import VariantCacheService from '@/services/variantCacheService';
@@ -194,6 +194,35 @@ export default function WishlistPage() {
     setSelectedCategory('all');
     setPriceRange({ min: '', max: '' });
     setCurrentPage(1);
+  };
+
+  // Handle add single item to cart
+  const handleAddSingleToCart = async (item: WishlistItem) => {
+    try {
+      // Get best variant for the product
+      const bestVariant = selectBestVariant(item.product as any, {}, variantCache);
+      if (!bestVariant) {
+        showError('Sản phẩm không có phiên bản phù hợp');
+        return;
+      }
+
+      // Check if variant is available
+      if (!hasAvailableVariants(item.product as any)) {
+        showError('Sản phẩm hiện tại không có sẵn');
+        return;
+      }
+
+      // Add to cart
+      await addMultipleToCart([{
+        variantId: bestVariant._id,
+        quantity: 1
+      }]);
+
+      showSuccess('Đã thêm sản phẩm vào giỏ hàng');
+    } catch (error) {
+      console.error('Error adding single item to cart:', error);
+      showError('Không thể thêm sản phẩm vào giỏ hàng');
+    }
   };
 
   // Handle add all to cart - ULTRA OPTIMIZED version with parallel processing
@@ -444,25 +473,33 @@ export default function WishlistPage() {
             <div className={styles.wishlistContainer}>
               {paginatedItems.length > 0 ? (
                 <>
-                  {/* Enhanced Wishlist Actions */}
+                  {/* Statistics */}
+                  <WishlistStats 
+                    items={wishlistItems} 
+                    loading={loading}
+                  />
+
+                  {/* Enhanced Wishlist Actions - Updated to match new component */}
                   <WishlistQuickActions
                     totalItems={wishlistItems.length}
-                    filteredItems={filteredAndSortedItems.length}
+                    inStockItems={wishlistItems.filter(item => item.product.isActive !== false).length}
                     onClearAll={handleClearWishlist}
                     onAddAllToCart={handleAddAllToCart}
-                    onSelectMode={() => setIsSelectMode(!isSelectMode)}
-                    isSelectMode={isSelectMode}
+                    onSortChange={(sort) => setSortBy(sort as any)}
+                    onFilterChange={(filter) => {
+                      // Handle filter changes if needed
+                    }}
                   />
 
                   {/* Wishlist Items Grid */}
-                  <div className={styles.wishlistItems}>
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     {paginatedItems.map((item, index) => (
-                      <WishlistItemEnhanced
+                      <EnhancedWishlistItem
                         key={`${item._id || item.product._id}-${index}`}
                         item={item}
-                        index={index}
-                        productStats={productStats}
                         onRemove={handleRemoveItem}
+                        onAddToCart={(productId) => handleAddSingleToCart(item)}
+                        onViewProduct={(productId) => router.push(`/products/${productId}`)}
                       />
                     ))}
                   </div>

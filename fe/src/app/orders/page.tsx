@@ -4,9 +4,10 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts';
 import { useApiNotification } from '@/hooks';
-import { PageHeader, LoadingSpinner, Button, Pagination, OrderDetailButton } from '@/app/components/ui';
-import { EnhancedOrderCard, OrderStats } from './OrderEnhancements';
+import { PageHeader, LoadingSpinner, Button, Pagination } from '@/app/components/ui';
+import { EnhancedOrderCard, OrderStats } from './EnhancedOrderComponents';
 import { orderService } from '@/services/orderService';
+import { useCart } from '@/contexts';
 import { OrderWithRefs } from '@/types';
 import { formatCurrency } from '@/lib/utils';
 import { 
@@ -58,6 +59,10 @@ export default function OrdersPage() {
     endDate: ''
   });
 
+  const [showDetailModal, setShowDetailModal] = useState(false);
+  const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
+  const { addToCart } = useCart();
+
   // Redirect if not authenticated
   useEffect(() => {
     if (!authLoading && !user) {
@@ -72,6 +77,50 @@ export default function OrdersPage() {
       loadOrders();
     }
   }, [user, currentPage, filters]);
+
+  // Handle reorder
+  const handleReorder = async (order: OrderWithRefs) => {
+    try {
+      for (const item of order.items || []) {
+        if (item.productVariant) {
+          await addToCart(
+            item.productVariant._id, 
+            item.quantity
+          );
+        }
+      }
+      showSuccess(`Đã thêm ${order.items?.length || 0} sản phẩm vào giỏ hàng`);
+      router.push('/cart');
+    } catch (error) {
+      showError('Có lỗi khi thêm sản phẩm vào giỏ hàng');
+    }
+  };
+
+  // Handle track order
+  const handleTrackOrder = (orderId: string) => {
+    router.push(`/orders/${orderId}/tracking`);
+  };
+
+  // Handle review order
+  const handleReview = (orderId: string) => {
+    router.push(`/orders/${orderId}/review`);
+  };
+
+  // Handle download invoice
+  const handleDownloadInvoice = async (orderId: string) => {
+    try {
+      // In a real app, this would download a PDF invoice
+      showSuccess('Tính năng tải hóa đơn sẽ có sớm');
+    } catch (error) {
+      showError('Không thể tải hóa đơn');
+    }
+  };
+
+  // Handle view details
+  const handleViewDetails = (orderId: string) => {
+    setSelectedOrderId(orderId);
+    setShowDetailModal(true);
+  };
 
   const loadOrders = async () => {
     try {
@@ -162,33 +211,6 @@ export default function OrdersPage() {
     } catch (error: any) {
       console.error('❌ Error canceling order:', error);
       showError('Không thể hủy đơn hàng', error);
-    }
-  };
-
-  // Handle reorder
-  const handleReorder = async (orderId: string) => {
-    try {
-      // Get order details
-      const order = await orderService.getOrderById(orderId);
-      
-      // Navigate to the order for manual re-add to cart
-      // In a real implementation, you would add items to cart programmatically
-      showSuccess('Chuyển đến trang sản phẩm để đặt lại');
-      router.push(`/orders/${orderId}`);
-    } catch (error: any) {
-      console.error('❌ Error reordering:', error);
-      showError('Không thể đặt lại đơn hàng', error);
-    }
-  };
-
-  // Handle download invoice
-  const handleDownloadInvoice = async (orderId: string) => {
-    try {
-      showSuccess('Tính năng tải hóa đơn sẽ được cập nhật sớm');
-      // TODO: Implement invoice download
-    } catch (error: any) {
-      console.error('❌ Error downloading invoice:', error);
-      showError('Không thể tải hóa đơn', error);
     }
   };
 
@@ -309,14 +331,16 @@ export default function OrdersPage() {
               </div>
             ) : (
               <>
-                <div className={styles.ordersList}>
+                <div className="space-y-6">
                   {orders.map((order) => (
                     <EnhancedOrderCard
                       key={order._id}
                       order={order}
-                      onCancelOrder={handleCancelOrder}
+                      onViewDetails={handleViewDetails}
                       onReorder={handleReorder}
                       onDownloadInvoice={handleDownloadInvoice}
+                      onTrackOrder={handleTrackOrder}
+                      onReview={handleReview}
                     />
                   ))}
                 </div>

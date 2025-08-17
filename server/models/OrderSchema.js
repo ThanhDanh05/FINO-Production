@@ -25,6 +25,20 @@ const OrderSchema = new mongoose.Schema({
   status: { type: String, enum: ['pending', 'processing', 'shipped', 'delivered', 'cancelled'], default: 'pending' },
   paymentMethod: { type: mongoose.Schema.Types.ObjectId, ref: 'PaymentMethod', required: true },
   paymentStatus: { type: String, enum: ['pending', 'paid', 'failed', 'cancelled'], default: 'pending' }, // Updated for VNPay
+  deliveryDriver: { type: mongoose.Schema.Types.ObjectId, ref: 'DeliveryDriver', default: null }, // Thông tin tài xế giao hàng
+  deliveryInfo: {
+    estimatedDeliveryTime: { type: Date }, // Thời gian giao hàng dự kiến
+    actualDeliveryTime: { type: Date }, // Thời gian giao hàng thực tế
+    deliveryNotes: { type: String }, // Ghi chú giao hàng
+    trackingNumber: { type: String }, // Mã theo dõi đơn hàng (nếu có)
+    deliveryAttempts: { type: Number, default: 0 }, // Số lần thử giao hàng
+    lastAttemptDate: { type: Date }, // Lần thử giao hàng cuối cùng
+    deliveryStatus: { 
+      type: String, 
+      enum: ['not_assigned', 'assigned', 'picked_up', 'in_transit', 'attempted', 'delivered', 'failed'],
+      default: 'not_assigned'
+    }
+  },
   paymentDetails: { // VNPay payment details
     transactionNo: { type: String }, // VNPay transaction number
     bankCode: { type: String }, // Bank code from VNPay
@@ -139,6 +153,7 @@ OrderSchema.statics.createFromCart = async function(cart, orderDetails) {
     'address', 
     'voucher', 
     'paymentMethod',
+    // 'deliveryDriver', // Temporarily disabled to fix checkout
     {
       path: 'items.productVariant',
       populate: [
